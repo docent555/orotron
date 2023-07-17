@@ -63,7 +63,7 @@ Jp = complex(zeros(length(ZAxis),1));
 Field(:,1) = InitialField;
 TAxisNew(1,1) = TAxis(1,1);
 
-delta = zeros(length(ZAxis),1);
+kpar2 = zeros(length(ZAxis),1);
 
 DeltaZ = ZAxis(2) - ZAxis(1);
 DeltaT = TAxis(2) - TAxis(1);
@@ -81,8 +81,8 @@ CR = 0;
 OldSigmaNz = complex(0);
 OldSigmaNzm1 = complex(0);
 
-WNz = -((0.666666666666667*C0*DeltaZ/DeltaT + delta(end)*DeltaZ/3) - 1/DeltaZ);
-WNzm1 = -((C0/3*DeltaZ/DeltaT + delta(end-1)*DeltaZ/6) + 1/DeltaZ);
+WNz = -((0.666666666666667*C0*DeltaZ/DeltaT + kpar2(end)*DeltaZ/3) - 1/DeltaZ);
+WNzm1 = -((C0/3*DeltaZ/DeltaT + kpar2(end-1)*DeltaZ/6) + 1/DeltaZ);
 
 
 % C2 = 1/sqrt(1i*pi);
@@ -96,7 +96,7 @@ C = complex(zeros(N-1,1));
 D = complex(zeros(N,1));
 
 A(1) = 1;
-A(2:end-1) = -2*(1 - DeltaZ/DeltaT*C0*DeltaZ - DeltaZ*delta(2:end-1)*DeltaZ/2);
+A(2:end-1) = -2*(1 - DeltaZ/DeltaT*C0*DeltaZ - DeltaZ*kpar2(2:end-1)*DeltaZ/2);
 A(end) = 1 + 1.333333333333333*C2*WNz*SQRDT;
 
 B(1) = 0;
@@ -154,7 +154,7 @@ for step=1:steps
     
 %     J = zeros(length(ZAxis),1);    
     theta(:,:) = pendulumODE_mex(field(:,1), ZAxis(:,1), th0(1,:), Delta);
-    J(:,1) = I * 2 / Ne * sum(exp(-1i*theta), 2);
+    J(:,1) = I * 2 / Ne * sum(exp(-1i*theta), 2);        
     
     if (step ~= 1) && (mod(step-1,INTERVALT) == 0)
         OUT.OUTJ(:,jout) = J(IZ,1);
@@ -171,18 +171,18 @@ for step=1:steps
     OldJNz(IDX(step - 1)) = J(end);
     OldJNzm1(IDX(step - 1)) = J(end - 1);
     
-    SigmaNz = -(delta(end)/6 + C0/3/DeltaT) * OldFNz(IDX(step - 1)) ...
-        + (C0/3/DeltaT - delta(end)/6) * OldFNz(IDX(step - 2)) ...
+    SigmaNz = -(kpar2(end)/6 + C0/3/DeltaT) * OldFNz(IDX(step - 1)) ...
+        + (C0/3/DeltaT - kpar2(end)/6) * OldFNz(IDX(step - 2)) ...
         + 0.166666666666667*(OldJNz(IDX(step - 1)) + OldJNz(IDX(step - 2))) - OldSigmaNz;
-    SigmaNzm1 = -(delta(end - 1)/6 + C0/3/DeltaT) * OldFNzm1(IDX(step - 1)) ...
-        + (C0/3/DeltaT - delta(end - 1)/6) * OldFNzm1(IDX(step - 2)) ...
+    SigmaNzm1 = -(kpar2(end - 1)/6 + C0/3/DeltaT) * OldFNzm1(IDX(step - 1)) ...
+        + (C0/3/DeltaT - kpar2(end - 1)/6) * OldFNzm1(IDX(step - 2)) ...
         + 0.166666666666667*(OldJNzm1(IDX(step - 1)) + OldJNzm1(IDX(step - 2))) - OldSigmaNzm1;
     
     OldSigmaNz = SigmaNz;
     OldSigmaNzm1 = SigmaNzm1;
     
-    WR(step) = DeltaZ * ((C0 * 0.666666666666667 / DeltaT - delta(end) / 3) * field(end)...
-        + (C0 / 3 / DeltaT - delta(end - 1) / 6) * field(end - 1)...
+    WR(step) = DeltaZ * ((C0 * 0.666666666666667 / DeltaT - kpar2(end) / 3) * field(end)...
+        + (C0 / 3 / DeltaT - kpar2(end - 1) / 6) * field(end - 1)...
         + 0.166666666666667*(4 * J(end) + 2 * J(end - 1)) - (2 * SigmaNz + SigmaNzm1));
     
     u = @(j) (WNzm1 * OldFNzm1(IDX(j)) + WNz * OldFNz(IDX(j)) + WR(j + 1)).' .* exp(CR * DeltaT * (step - j));
@@ -201,7 +201,7 @@ for step=1:steps
     
     D(1) = 0;
     D(2:end - 1) = DeltaZ.^2 * (2*J(2:end-1)) ...
-        + 2 * (1 + C0 * DeltaZ.^2/DeltaT - DeltaZ.^2 * delta(2:end-1)/2) .* field(2:end - 1)...
+        + 2 * (1 + C0 * DeltaZ.^2/DeltaT - DeltaZ.^2 * kpar2(2:end-1)/2) .* field(2:end - 1)...
         - (field(1:end - 2) + field(3:end));
     D(end) = -C2*(IR + 1.333333333333333 * WR(step) * SQRDT + 0.666666666666667 * DeltaT * (WNzm1 * field(end - 1)...
         + WNz * field(end) + WR(step)) * exp(CR * DeltaT) / SQRDT);
@@ -212,8 +212,8 @@ for step=1:steps
     theta(:,:) = pendulumODE_mex(field_p(:,1), ZAxis(:,1), th0(1,:), Delta);
     Jp(:,1) = I * 2 / Ne * sum(exp(-1i*theta), 2);
     
-    WR(step) = DeltaZ * ((C0 * 0.666666666666667 / DeltaT - delta(end) / 3) * field(end)...
-        + (C0 / 3 / DeltaT - delta(end - 1) / 6)*field(end - 1)...
+    WR(step) = DeltaZ * ((C0 * 0.666666666666667 / DeltaT - kpar2(end) / 3) * field(end)...
+        + (C0 / 3 / DeltaT - kpar2(end - 1) / 6)*field(end - 1)...
         + 0.166666666666667 * (2 * Jp(end) + 2 * J(end) + Jp(end - 1) + J(end - 1)) - (2 * SigmaNz + SigmaNzm1));
     
     u = @(j) (WNzm1 * OldFNzm1(IDX(j)) + WNz * OldFNz(IDX(j)) + WR(j + 1)).' .* exp(CR * DeltaT * (step - j));
@@ -223,7 +223,7 @@ for step=1:steps
     end
     
     D(2:end - 1) = DeltaZ.^2 * (Jp(2:end - 1) + J(2:end - 1)) ...
-        + 2 * (1 + C0 * DeltaZ.^2 / DeltaT - DeltaZ.^2 * delta(2:end - 1) / 2).*field(2:end - 1)...
+        + 2 * (1 + C0 * DeltaZ.^2 / DeltaT - DeltaZ.^2 * kpar2(2:end - 1) / 2).*field(2:end - 1)...
         - (field(1:end - 2) + field(3:end));
     D(end) = -C2*(IR + 1.333333333333333 * WR(step) * SQRDT + 0.666666666666667 * DeltaT * (WNzm1 * field(end - 1)...
         + WNz * field(end) + WR(step)) * exp(CR * DeltaT) / SQRDT);
